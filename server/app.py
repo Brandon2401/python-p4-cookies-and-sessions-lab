@@ -2,6 +2,7 @@
 
 from flask import Flask, make_response, jsonify, session
 from flask_migrate import Migrate
+from math import ceil
 
 from models import db, Article, User
 
@@ -27,8 +28,24 @@ def index_articles():
 
 @app.route('/articles/<int:id>')
 def show_article(id):
+    session['page_views'] = session.get('page_views', 0) + 1
 
-    pass
+    if session['page_views'] > 3:
+        return jsonify({
+            "message": "Maximum pageview limit reached"
+        }), 401
 
-if __name__ == '__main__':
-    app.run(port=5555)
+    article = Article.query.get(id)
+
+    word_count = len(article.content.split())
+    minutes_to_read = max(1, ceil(word_count / 200))
+
+    return jsonify({
+        "id": article.id,
+        "title": article.title,
+        "author": article.author,
+        "content": article.content,
+        "preview": article.content[:50],
+        "minutes_to_read": minutes_to_read,
+        "date": article.date.isoformat()
+    }), 200
